@@ -1,12 +1,10 @@
 ﻿window.onload = () =>
 {
     var canv: HTMLCanvasElement = <HTMLCanvasElement>document.getElementById("canvas");
+    var panel: HTMLDivElement = <HTMLDivElement>document.getElementById("panel");
     canv.width = 1000;
     canv.height = 600;
     var gl = canv.getContext("webgl");
-    var txt: HTMLScriptElement = <HTMLScriptElement>document.getElementById("vs");
-
-
 
     var img = new Image();
     img.onload = () =>
@@ -14,6 +12,8 @@
         var cylinder = new Cylinder(gl, canv, 10, 0.4, 1);
         cylinder.initdata(img);
         cylinder.drawself();
+        cylinder.getcurfiles(panel, "1.jpg", "res/1.jpg", "cyl.obj", "cyl.mtl");
+        
     }
     img.src = "res/1.jpg";
 
@@ -314,7 +314,7 @@ class Cylinder
             var angrad = angspan * i;
 
             uvdata[count++] = Math.cos(angrad) * this.r * 2 + 0.5;
-            uvdata[count++] = Math.sin(angrad) * this.r * 2+ 0.5;
+            uvdata[count++] = Math.sin(angrad) * this.r * 2 + 0.5;
         }
         uvdata[count++] = 0.5;
         uvdata[count++] = 0.5;
@@ -401,7 +401,7 @@ class Cylinder
         var tMat = m.identity(m.create());
         var mvpMat = m.identity(m.create());
         var invMatrix = m.identity(m.create());
-        var lightDirection = [0.5, 0.5, 0];//平行光
+        var lightDirection = [2, 2, 1];//平行光
         var ambientColor = [0.1, 0.1, 0.1, 1.0]; //环境光
         //视图变换矩阵
         m.lookAt([1, 2, 0], [0, 0, 0], [0, 1, 0], vMat);
@@ -437,9 +437,71 @@ class Cylinder
         }
         draw();
     }
-    toobj()
-    {
 
+    getcurfiles(panel: HTMLDivElement, imgname, imgsrc, objname, mtlname)
+    {
+        var btn = document.createElement("button");
+        btn.textContent = "导出 Obj";
+        btn.style.width = "100px";
+        btn.style.height = "50px";
+        btn.style.position = "absolute";
+        btn.style.top = "120px";
+        btn.style.left = "900px";
+        panel.appendChild(btn);
+        btn.onclick = () =>
+        {
+            //获取当前的贴图  obj  mtl
+            FileHelper.SaveFile(imgname, imgsrc);
+            var strs = this.toobj(mtlname);
+            FileHelper.SaveStringFile(objname, strs[0]);
+            FileHelper.SaveStringFile(mtlname, this.tomtl(strs[1]));
+        }
+    }
+    toobj(mtlname:string)
+    {
+        //v 顶点数据  vt  uv数据  vn  法线数据  
+        var matname = "img";
+        var str = "mtllib " + mtlname + "\no Cylinder\n";
+        var verdata = this.creat_verdata();
+        var nordata = this.creat_nordata();
+        var uvdata = this.creat_uvdata();
+        var _inddata = this.creat_indxdata();
+        for (var i = 0; i < verdata.length - 2; i += 3)
+        {
+            str += "v " + verdata[i] + " " + verdata[i + 1] + " " + verdata[i + 2] + "\n";
+        }
+        for (var i = 0; i < uvdata.length - 1; i += 2)
+        {
+            str += "vt " + uvdata[i] + " " + uvdata[i + 1] + "\n";
+        }
+        for (var i = 0; i < nordata.length - 2; i += 3)
+        {
+            str += "vn " + nordata[i] + " " + nordata[i + 1] + " " + nordata[i + 2] + "\n";
+        }
+        str += "s off\nusemtl " + matname + "\n";
+        for (var i = 0; i < this.inddata.length - 2; i += 3)
+        {
+            _inddata[i]++;
+            _inddata[i+1]++;
+            _inddata[i+2]++;
+            str += "f " + _inddata[i] + "/" + _inddata[i] + "/" + _inddata[i] + " " + _inddata[i + 1] + "/" + _inddata[i + 1] + "/" + _inddata[i + 1] + " " + _inddata[i + 2] + "/" + _inddata[i+2] + "/" + _inddata[i + 2] + "\n";
+        }
+        return [str, matname];
+       // var txt = document.createElement("txt");
+       // txt.innerText = str;
+       // txt.innerText += this.creatmtl(matname);
+       //.appendChild(txt);
+
+    }
+    tomtl(matname:string)
+    {
+        var str = "newmtl " + matname + "\n";
+        str += "Kd 0.00 0.00 0.00\n";
+        str += "Ka 0.00 0.00 0.00\n";
+        str += "Tf 1.00 1.00 1.00\n";
+        str += "map_Kd 1.jpg\n";
+        str += "Ni 1.00\n";
+        return str;
     }
 }
 
